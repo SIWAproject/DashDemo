@@ -1,0 +1,784 @@
+---
+title: "Demo"
+output:
+  flexdashboard::flex_dashboard:
+    output_dir: docs
+    orientation: rows
+    vertical_layout: scroll
+    social: embed
+    css: estilo.css
+    logo: Wsiwa.png
+    mathjax: null
+    self_contained: FALSE
+editor_options:
+  chunk_output_type: console
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{css, echo=FALSE}
+.center {
+  display: table;
+  margin-right: auto;
+  margin-left: auto;
+}
+```
+
+```{r , echo=FALSE, include=TRUE}
+# load data in 'global' chunk so it can be shared by all users of the dashboard
+library(phyloseq)
+library(ggplot2)
+library(genefilter)
+library(shinydashboard)
+library(devtools)
+library(tidyr)
+library(flexdashboard)
+library(kableExtra)
+library(microbiome)
+library(plyr)
+library(plotly)
+library(stringr)
+library(microbiomeutilities)
+library(microViz)
+library(gtools)
+library(ggpubr)
+library(reshape2)
+
+
+setwd("/Users/dvarelat/Documents/SIWA/DashDemo")
+source("functions.R")
+
+folder <- "/Users/dvarelat/Documents/SIWA/Reports/Version1.0/Input_data/"
+ODLEPobj <- readRDS(paste0(folder, "phyloseqObject_April11.rds"))
+ODLEPobj_cecum<-subset_samples(ODLEPobj, SampleLocation=="C")
+ODLEPobj_ileum<-subset_samples(ODLEPobj, SampleLocation=="I")
+ODLEPobj_feces<-subset_samples(ODLEPobj, SampleLocation=="F")
+
+
+pseq.rel_cecum <- microbiome::transform(ODLEPobj_cecum, "compositional")
+pseq.rel_ileum <- microbiome::transform(ODLEPobj_ileum, "compositional")
+
+```
+
+
+Project description {data-icon="fa-table"}
+===================================== 
+
+Row {data-height=600}
+-------------------------------------
+
+### {data-width=400}
+
+```{r picture, include= TRUE, echo=FALSE}
+
+cvi_colours = list(
+  cvi_siwa = c("#03343a", "#4e8e74","#f99b35",  "#e5c217",  
+               "#075b44", "#f9b870", "#f7e76d", 
+                  "#017fb1", "#5cb08e" , "#fcd8b6", "#fcf5cd", "#ABF4D4",
+               "#8CDBF4","#F7927F"),
+  
+  alpha_colors = c( "#075b44",  "#017fb1", "#ABF4D4"),
+  groups_beta = c( "#075b44", "#f9b870" ), 
+  groups=c("#4e8e74", "#035060", "#f99b35", "#BC8808")
+)
+
+cvi_palettes = function(name, n, all_palettes = cvi_colours, type = c("discrete", "continuous")) {
+  palette = all_palettes[[name]]
+  if (missing(n)) {
+    n = length(palette)
+  }
+  type = match.arg(type)
+  out = switch(type,continuous = grDevices::colorRampPalette(palette)(n),discrete = palette[1:n]
+  )
+  structure(out, name = name, class = "palette")
+}
+
+scale_color_cvi_d = function(name) {
+  ggplot2::scale_colour_manual(values = cvi_palettes(name, type = "discrete"))
+}
+scale_fill_cvi_d = function(name) {
+  ggplot2::scale_fill_manual(values = cvi_palettes(name,type = "discrete"))
+}
+```
+
+### {data-width=300}
+
+**Nombre del experimento!!**
+
+Lorem Ipsum is simply dummy text of the printing and typesetting industry. Lorem Ipsum has been the industry's standard dummy text ever since the 1500s, when an unknown printer took a galley of type and scrambled it to make a type specimen book. It has survived not only five centuries, but also the leap into electronic typesetting, remaining essentially unchanged. It was popularised in the 1960s with the release of Letraset sheets containing Lorem Ipsum passages, and more recently with desktop publishing software like Aldus PageMaker including versions of Lorem Ipsum.
+
+# Exploration {data-navmenu="Microbiome"}
+
+Row {data-height=120}
+-----------------------------------------------------------------------
+Sequences identified during the sequencing process are grouped in batches of identical sequences so that the number of times that sequences was found can be recorded. This is the abundance of the sequence. The groups of identical sequences are called Operational Taxonomic Units 
+<a href="https://en.wikipedia.org/wiki/Operational_taxonomic_unit" target="_blank">(OTUs)</a> or Amplicon Sequence Variants <a href="https://en.wikipedia.org/wiki/Amplicon_sequence_variant" target="_blank">(ASVs)</a>, and they often (but not always) correspond to species or genera of bacteria. In the Figure 1 we can observe the prevalence of OTUs across all samples (the fixed threshold for an OTU to be considered present in a sample is 0.1% relative abundance). 
+
+
+Row {data-height=600}
+-----------------------------------------------------------------------
+### {data-width=300}
+
+The sequencing process identified more than 1300 unique sequences, and as expected, only a few OTUs are shared by the majority of samples (Fig1). Black percentages in each graph (Fig1) indicate the percentage of OTUs in that site that are present in at least 50% of the samples. As seen in the graph, most are rare taxa detected in only a small portion of samples. It is common to find a small number of OTUs which are dominant in the community, while most others are much less abundant and they are unlikely to be biologically related to any performance or treatment-based effects. Only 3% of OTUs in the feces are shared by more than 50% of samples, while in the cecum this number is 11%. This means that cecal samples tend to have more microbes in common than fecal samples. 
+
+### FIGURE 1 {data-width=700}
+
+```{r Prevalence Plot, echo=FALSE, include=TRUE, cache=TRUE, fig.height = 8, fig.width= 10}
+source("prevalence_plot.R")
+
+p <- prevalence(ODLEPobj_cecum, ODLEPobj_ileum, ODLEPobj_feces)
+
+figure <- ggarrange( p[[1]]$cecum, p[[1]]$ileum , p[[1]]$feces, 
+                    ncol = 1, nrow = 3,
+                    font.label = list(size = 10, color = "black", face = "plain"))
+annotate_figure(figure,
+                bottom = text_grob("OTUs in order of prevalence"), 
+                left = text_grob("Samples in which OTU is present (%)", rot=90)) 
+
+```
+
+Row {data-height=30}
+-----------------------------------------------------------------------
+
+
+Row {data-height=90}
+-----------------------------------------------------------------------
+
+After filtering low-abundance sequences, the remaining data can be explored more easily. Exploring the distribution of sequences at different taxonomic levels can help us understand the general microbiome composition of the samples in the experiment as a whole.  
+
+Row {data-height=500}
+-----------------------------------------------------------------------
+### {data-width=200} 
+
+In Figure 2 we can observe the prevalence and abundance of the OTUs at phylum level. Each point is a different OTU, prevalence in Y axis is the proportion of samples in which each OTU is present. The x axis is the abundance in which each OTU is found. Each dot represents an OTU. 
+
+### FIGURE 2 {data-width=700}
+
+```{r Prevalence Phylum, echo=FALSE, include=TRUE, cache=TRUE}
+pseq.rel <- microbiome::transform(ODLEPobj, "compositional")
+flist    <- filterfun(kOverA(5, 2e-05))
+ODLEPobjRelFilter =  filter_taxa(pseq.rel, flist, TRUE)
+p <- plot_taxa_prevalence(ODLEPobjRelFilter, "Phylum")
+
+p <- p + theme(legend.position='none')
+ggplotly(p) %>% 
+ layout( 
+ xaxis = list(automargin=TRUE), 
+ yaxis = list(automargin=TRUE)
+ ) %>% 
+  style(hoverinfo = 'none') %>% partial_bundle() 
+
+```
+
+Row {data-height=80}
+-----------------------------------------------------------------------
+
+# Diversity {data-navmenu="Microbiome"}
+
+Row {data-height=50}
+-----------------------------------------------------------------------
+Microbiome diversity can be assessed through multiple ecological indices that can be divided into two kinds of measures, alpha and beta diversity. <a href="https://en.wikipedia.org/wiki/Alpha_diversity" target="_blank">Alpha diversity</a> measures the variability of species within a sample while <a href="https://en.wikipedia.org/wiki/Beta_diversity" target="_blank">beta diversity</a> accounts for the differences in composition between samples.
+
+Row {data-height=50}
+-----------------------------------------------------------------------
+
+Row {data-height=30}
+-----------------------------------------------------------------------
+**Alpha diversity**
+
+Row {data-height=30}
+-----------------------------------------------------------------------
+*Richness* = This index represents the observed OTUs or features in the sample.
+
+Row {data-height=50}
+-----------------------------------------------------------------------
+*Shannon diversity* = This index measures the homogeneity in abundance of the different OTUs in a sample. In other words, shannon index is an estimate of how complex the community is.
+
+
+Row {data-height=600}
+-----------------------------------------------------------------------
+
+### {data-width=350}
+
+Alpha diversity analyses showed a higher diversity for Cecum compared to the other gut locations, larger microbiome alpha diversity being usually associated to better health status. However, it is also normal for each region of the gut to have different ranges of richness/diversity. The **cecal microbiome** tends to be very rich, while the small intestines and Feces usually have a smaller number of bacterial species. 
+
+Further alpha diversity analyses showed a few differences between treatment groups within the Cecum samples and within the Ileum samples. In the fecal samples there were no differences between treatments regardless of the index used. This is not uncommon; many changes in microbial diversity occur at the level of abundance, rather than richness. In other words, the types of bacteria present in a community may not change very much, but abundances of individual groups of bacteria can shift, generating changes in the ecosystem and representing the real differences between treatments. And this can not always be captured using alpha diversity calculations.
+
+
+### FIGURE 3. {data-width=650}
+
+```{r , echo=FALSE}
+pdiv <- plot_anova_diversity_edit(ODLEPobj, method = c("richness", "shannon"),
+                                  grouping_column =  "SampleLocation", pValueCutoff=0.05) + 
+                                  xlab(NULL) + ylab(NULL) + theme(legend.position = "none")
+
+pdiv + scale_color_cvi_d("alpha_colors")
+```
+
+Row {data-height=80}
+-----------------------------------------------------------------------
+
+Row {data-height=400}
+-----------------------------------------------------------------------
+
+### Diversity comparison {data-width=200}
+
+There are many dietary and environmental variables that can affect the diversity and stability of the microbiome, predisposing the community to dysbiosis and overgrowth of opportunistic bacteria.  Alpha diversity metrics summarize the structure of an ecological community with respect to its richness (number of taxonomic groups), evenness (distribution of abundances of the groups), or both in the case of the Shannon Index.
+
+
+### FIGURE 4. {data-width=600}
+
+```{r, echo=FALSE, fig.width=15, fig.height=6}
+input_dir <- "/Users/dvarelat/Documents/SIWA/Pets_flex/Input_data/"
+plot_alpha <- readRDS(file=paste0(input_dir, "plot_div.rds"))
+
+plot_alpha + scale_color_cvi_d("alpha_colors")
+```
+
+# Composition {data-navmenu="Microbiome"}
+
+Row {data-height=30}
+-----------------------------------------------------------------------
+
+**Beta diversity**
+
+Row {data-height=600}
+-----------------------------------------------------------------------
+
+### {data-width=350}
+Hence, we went on to evaluate those differences in bacterial abundances between the samples, this is also known as beta diversity or **"compositional"** distance. These distances (In our case Bray Curtis dissimilarities) are often visualized with a method called **principal coordinates analysis (PCoA)**. Each axis represents a combination of features (OTUs) that account for high amounts of variation between samples.  The percentage of the differences for which this combination of features accounts is shown on the axis. Each dot in the figure is a sample. Samples that are on opposite ends of an axis that accounts for a high percentage of variability are likely to be more different than samples that are on opposite ends of an axis that only accounts for low percentage of the total variability.
+
+These analyses evidenced clear differentiation between samples of different gut locations (pval=0.001), which was biologically expected since different locations of the gut have different dynamics, roles and environmental conditions.
+
+### FIGURE 5: {data-width=650}
+```{r beta, include=TRUE, echo=FALSE}
+out.bray <-
+    ordinate(
+      ODLEPobj, method = "MDS", 
+      distance = "bray")
+p <- plot_ordination(
+    ODLEPobj,
+    out.bray,
+    color = "Group",
+    axes = c(1, 2),
+    justDF = FALSE
+  )
+df <- p$data
+df$SampleLocation <- as.factor(df$SampleLocation)
+plot <- ggplot(df, aes(
+    x = Axis.1,
+    y = Axis.2,
+    color = SampleLocation)) +
+    geom_point(size=2) +xlab(p$labels$x) + ylab(p$labels$y) + scale_color_cvi_d("alpha_colors")
+
+ggplotly(plot,  height = 500)
+```
+
+Row {data-height=80}
+-----------------------------------------------------------------------
+
+
+Row {data-height=400}
+-----------------------------------------------------------------------
+
+### FIGURE 6
+
+```{r beta2, include=TRUE, echo=FALSE}
+out.bray <-
+    ordinate(
+      ODLEPobj_cecum, method = "MDS", 
+      distance = "bray")
+p <- plot_ordination(
+    ODLEPobj_cecum,
+    out.bray,
+    color = "Group",
+    axes = c(1, 2),
+    justDF = FALSE
+  )
+df <- p$data
+df$Calcium_level <- as.factor(df$Calcium_level)
+df <- df[df$Calcium_level %in% c(1, 4),]
+df$Group <- ifelse(df$Calcium_level == 1, "Group A", "Group B")
+plot <- ggplot(df, aes(
+    x = Axis.1,
+    y = Axis.2,
+    color = Group)) +
+    geom_point(size=2) +xlab(p$labels$x) + ylab(p$labels$y) + scale_color_cvi_d("groups_beta")
+
+ggplotly(plot,  height = 300)
+```
+
+Row {data-height=80}
+-----------------------------------------------------------------------
+
+Row {data-height=600}
+-----------------------------------------------------------------------
+### FIGURE 7
+
+```{r , echo=FALSE, fig.width=15, fig.height=7}
+## plot ileum cecum --> mirando aparte las importantes de cada uno
+genus_to_keep <- function(phyloseq_relative, N = 12) {
+  ps.com.gen <-microbiomeutilities::aggregate_top_taxa2(phyloseq_relative, level = "Genus", top= N)
+  keep_genus <-
+    as.list(as.data.frame(phyloseq::tax_table(ps.com.gen))$Genus)
+  keep_genus <- keep_genus[keep_genus != "UNKNOWN"]
+  keep_genus <- keep_genus[keep_genus != "Other"]
+  return(keep_genus)
+}
+
+keep_genus_cecum <- genus_to_keep(pseq.rel_cecum, 10)
+keep_genus_ileum <- genus_to_keep(pseq.rel_ileum, 10)
+
+grouped <- aggregate_taxa_siwa(pseq.rel_cecum, "Genus")
+melted <- psmelt(otu_table(grouped, taxa_are_rows = TRUE))
+metadata <- sample_data(pseq.rel_cecum)
+melted$SampleID <- melted$Sample
+melted <- dplyr::left_join(melted, metadata, by="SampleID")
+melted$label <-as.character(if_else(melted$OTU %in% keep_genus_cecum, melted$OTU, "Others"))
+df <- melted[, c("label", "Abundance", "KitID")]
+df <- df[df$KitID %in% c(72, 73), ]
+df_agg_cecum<-aggregate(df$Abundance,
+          by = list(df$label, df$KitID),FUN = sum)
+colnames(df_agg_cecum) <-c("Genus", "KitID", "Abundance")
+df_agg_cecum$Location <- "Cecum"
+grouped <- aggregate_taxa_siwa(pseq.rel_ileum, "Genus")
+melted <- psmelt(otu_table(grouped, taxa_are_rows = TRUE))
+metadata <- sample_data(pseq.rel_ileum)
+melted$SampleID <- melted$Sample
+melted <- dplyr::left_join(melted, metadata, by="SampleID")
+melted$label <-as.character(if_else(melted$OTU %in% keep_genus_ileum, melted$OTU, "Others"))
+df <- melted[, c("label", "Abundance", "KitID")]
+df <- df[df$KitID %in% c(72, 73), ]
+df_agg_ileum<-aggregate(df$Abundance,
+          by = list(df$label, df$KitID),FUN = sum)
+colnames(df_agg_ileum) <-c("Genus", "KitID", "Abundance")
+df_agg_ileum$Location <- "Ileum"
+df_agg <- rbind(df_agg_cecum, df_agg_ileum)
+
+df_agg$Group <- ifelse(df_agg$KitID == 72, "Group A", "Group B")
+
+ggplot(df_agg,
+       aes(x = Group,
+           y = Abundance,
+           fill = Genus,)) +  geom_bar(stat = "identity", position = "fill") + facet_wrap( ~Location, scales = 'free', nrow=1,ncol=2) + scale_fill_cvi_d("cvi_siwa") + theme(axis.text.x = element_text(angle = 60, hjust = 1)) + theme(strip.text.x = element_text(size = 20), text = element_text(size=20))
+
+```
+
+# Scores and benchmarking {data-navmenu="Microbiome"}
+
+Row {data-height=600}
+-----------------------------------------------------------------------
+### FIGURE 8
+
+
+```{r ratios, include=FALSE, echo=FALSE}
+folder <- "/Users/dvarelat/Documents/SIWA/Reports/Version1.0/Input_data/"
+
+complete_sample_table <-read.table(paste0(folder, "performance_histo_ge_ratios_alphadiv_for_correlations.csv"),check.names = FALSE, header=T, sep="\t")
+ratios <- complete_sample_table
+ratios$Group <- ifelse(ratios$Alphad3_level == "VitD", "Group A", "Group B")
+
+colnames(ratios)
+ratios <- ratios[,c("SampleLocation", "Group", "ratio1LOG", "ratio2LOG", "ratio3LOG")]
+ratios_melt <- melt(ratios, id=c('SampleLocation', 'Group'))
+# ggplot(ratios_melt, aes(y = value, x =Group, fill = Group)) + 
+#   ylab("Score 3") + xlab("") + 
+#   geom_boxplot(outlier.shape = NA)  +
+#   theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1)) +
+#   geom_jitter(size=0.5)+
+#   facet_grid(cols="variable") + scale_fill_cvi_d("groups_beta")
+#ggarrange(ratio1, ratio2, ratio3, ncol=3, nrow = 1)
+
+
+```
+
+Row {data-height=30}
+-----------------------------------------------------------------------
+**Benchmarks**
+
+Row {data-height=80}
+-----------------------------------------------------------------------
+Benchmarks help compare a group of samples to a larger population of animals that have the same age and wide range of diets, in that way one can understand if the group of interest falls into the average range or if it is an outlier group in any microbiome indicator. The groups of interest in shapes and colors described in the legend and the wider population to which they are compared in drak blue as individual measurements (dots to the left) and quartiles (box to the right). 
+
+Row {data-height=100}
+-----------------------------------------------------------------------
+In this case we evaluated ...
+
+
+Row {data-height=500}
+-----------------------------------------------------------------------
+
+### FIGURE 9: SIWA Microbial Health Score 1 against the broader community
+
+```{r plot1, warning=FALSE, echo=FALSE}
+
+input_dir <- "/Users/dvarelat/Documents/SIWA/Pets_flex/Input_data/"
+df_c <- read.csv(paste0(input_dir, "bench_cecum.csv"))
+
+
+cs = list(list(0, "#03343a"), list(1, "#f7e76d"))
+df_c$quant <- gtools::quantcut(abs(df_c$ratio1LOG), 10, label = FALSE)
+p <- plot_ly(data=df_c) %>%
+  add_trace(x = ~ratio1LOG, y= 0.5, type = "box", boxpoints = "none",showlegend=FALSE,
+            orientation='h', fillcolor="#035060", 
+            marker = list(symbol = "square-dot", color="#035060"),
+            line = list(color = "#4e8e74",width = 2), 
+            hoverinfo='none') %>%
+  add_trace(type="scatter", mode="markers",  hoverinfo='none',showlegend=FALSE,
+            x=~ratio1LOG, y=rnorm(nrow(df_c), 0, 0.05), 
+            marker=list(color = ~quant, size=10, 
+                        autocolorscale=F, colorscale = cs)) %>%
+  add_trace(name="Group A",type="scatter", mode="markers",
+            x=0, y=0.55, textposition = "bottom center",hoverinfo='none',
+            marker=list(color = "#017fb1", size=15, symbol="triangle-down")) %>%
+  #add_annotations(x=0,y=0.6, text="Group A") %>% 
+  add_trace(name="Group B",type="scatter", mode="markers+text",
+            x=3, y=0.55, 
+            marker=list(color = "#e5c217", size=15, symbol="triangle-down")) %>% 
+  # add_annotations(x=3,y=0.6, text="Group B", ax = 50, ay = -40 ) %>% 
+  layout(xaxis = list(title = 'SIWA Microbial Health Score 1',
+                      showgrid = F,
+                      zerolinecolor = '#ffff'), 
+         legend =  list(orientation = "h",   # show entries horizontally
+                     xanchor = "center",  # use center of legend as anchor
+                     x = 0.5, y = 1))
+ggplotly(p, height=300)
+```
+
+Row {data-height=80}
+-----------------------------------------------------------------------
+
+# Differential Abundance {data-navmenu="Microbiome"}
+
+Differential abundance analysis is an important process for identifying bacteria that are statistically higher or lower in one group compared with others.  
+
+<a href="https://www.ncbi.nlm.nih.gov/pmc/articles/PMC3218848/" target="_blank">LEfSe</a> is a statistical method that identifies sequences that account for the most variation between groups. 
+
+We also used <a href="https://genomebiology.biomedcentral.com/articles/10.1186/gb-2010-11-10-r106" target="_blank">DESeq</a> 
+
+Row {data-height=600}
+-----------------------------------------------------------------------
+
+### FIGURE 10.1 {data-width=500}
+```{r, include=TRUE, warning=FALSE, echo=FALSE}
+df<- readRDS("inputdf_plotdeseq.RDS")
+
+p <- ggplot(df, aes(x = log2FoldChange , y = reorder(taxa, -log2FoldChange), color=ProbioticScore)) + geom_point(size = 6) + 
+  scale_color_manual(values = c("-6" = "#CB756E","-5" = "#CB766E", "-4" = "#CB766E","-3" = "#C87A6F","-2" = "#C67F71","-1" = "#c48473","0" = "#be9379","1" = "#b4ab81","2" = "#ADB987","3" = "#A9C38B","4" = "#A5CD8F","5" = "#A3D291"), na.value="dark grey") +
+  labs(fill = "taxa", color = "taxa", subtitle = c("Higher in Control", "Higher in Product"))  +
+  theme(legend.position = "none", plot.subtitle = element_text(size = 12, hjust = c(0,1), vjust = 1))  + 
+  geom_vline(xintercept=0,linetype="dashed",color="dark grey") +
+  ylab("")
+
+p
+```
+
+### FIGURE 10.2 {data-width=500}
+```{r, include=TRUE, warning=FALSE, echo=FALSE}
+
+bacterias <- c("Lactobacillus", "Oscillospira","Bacteroides","Turicibacter","Streptococcus")
+df <- data.frame(
+  class = c("Ganoderma","Ganoderma","Ganoderma", "No-Ganoderma","No-Ganoderma"),
+  names=bacterias,
+  len = c(4, 2.2, 2, 2.5, 3)
+  )
+df$class <- as.factor(df$class)
+df$names <-factor(df$names,levels = c("Lactobacillus", "Oscillospira","Bacteroides","Streptococcus","Turicibacter"))
+
+pl <- ggplot(df, aes(x=names, y = len, fill = class)) +
+  geom_bar(stat = "identity") + xlab("")+ ylab("LDA Score")+
+  coord_flip() + scale_fill_cvi_d("alpha_colors") 
+
+pl
+```
+
+Row {data-height=20}
+-----------------------------------------------------------------------
+
+Row {data-height=200}
+-----------------------------------------------------------------------
+
+### {data-width=300}
+
+**Lactobacillus** are well documented commensal bacteria in many animal species, including dogs.  Though they vary in function and preferred growth habitat, there are over 200 species that are widely used in fermented food preservation or for promoting gut health. Their habit of producing lactic acid contributes to both their food preservation and gut health abilities.  Species such as L acidophilus, casei, salivarius, and bulgaricus are common components of canine probiotics.
+
+### {data-width=400}
+```{r, echo=FALSE}
+#knitr::include_graphics("gauges1_lact.jpg")
+```
+
+Row {data-height=200}
+-----------------------------------------------------------------------
+
+### {data-width=300}
+
+**Streptococcus** comprises more than 100 species, most of them found in the normal microbiota of different animals. Within this diverse genus there are species of high medical interest which can cause mild and severe infections or present a high virulence potential for humans, other mammals, poultry and fish. Some of the diseases that these could cause include pneumonia, meningitis, mastitis, endocarditis, septicemia, skin diseases and neonatal problems causing premature deliveries.  Abundances have to be controlled to avoid dominance of these pathogens.
+
+### {data-width=400}
+
+```{r, echo=FALSE}
+#![](gauges2_tur.jpg){#id .class width=90% height=80%}
+```
+
+Row {data-height=80}
+-----------------------------------------------------------------------
+
+Histopathology {data-icon="fa-chart"} 
+===================================== 
+
+We evaluated the **physical structures** of the intestinal tract tissue to understand the impact of Calcium levels on gastrointestinal **inflammation and integrity**. We employ a scoring system that allows for semi-quantitative analysis of the integrity and inflammatory status of the gut. A score of 0 indicates a normal, healthy gut with no appearance of damage or aberration. A score of 5 for a given metric indicates extreme damage or aberration in the traits being evaluated. Bars with different letters are significantly different based on Tukey test.
+
+Row {data-height=400}
+-----------------------------------------------------------------------
+
+### FIGURE 11
+```{r, echo=FALSE, include=TRUE, warning=FALSE, fig.width=12, fig.height=7}
+histo <- complete_sample_table
+histo$KitID <- as.character(histo$KitID)
+histo <- histo[histo$KitID %in% c("72", "73"), ]
+histo$Group <- ifelse(histo$KitID == "72", "Group A", "Group B")
+
+dfff_create <- function(loc, var, order_factors){
+  ## se asume que en ambiente está el dataframe HISTO
+  ## crea dataframe list para plot (melted)
+  ## Columnas: ScoreCategory - mean - variable (treatment) 
+  histo_location <- histo[histo$SampleLocation == loc,]
+  histo_location2 <- histo_location %>%
+    pivot_longer(
+      cols = c(
+        "OverallArchitecture",
+        "MucosalIntegrity",
+        "LymphoidImmune",
+        "InflammationSeverity",
+        "MicrobialOrganisms",
+        "AdditiveScore"
+      ),
+      names_to = "ScoreCategory",
+      values_to = "Value"
+    )
+  ### lista por cada Trt
+  histo_l <- split(histo_location2, histo_location2[[var]])
+  ### Mean de cada ScoreCategory para cada Trt 
+  dff <-
+      lapply(histo_l, function(x)
+        ddply(x, .(ScoreCategory), summarize, mean = mean(Value)))
+  
+  for (i in 1:length(dff)) { dff[[i]][var] <- names(dff)[i]}
+  df_means_all <- do.call(rbind, dff)
+  rownames(df_means_all) <- NULL
+  df_means_all[[var]] <- factor(df_means_all[[var]], levels=order_factors)
+  
+  num_muestras = aggregate(histo_location2$SampleID,
+                           by = list(histo_location2[[var]]), function(x)
+                             length(unique(x)))
+  
+  colnames(num_muestras) <- c(var, "NumSamples")
+  num_muestras[[var]] <- factor(num_muestras[[var]], levels=order_factors)
+  df_means_all <- dplyr::left_join(df_means_all, num_muestras, by = var)
+  df_means_all
+}
+build_sign_table <- function(category_histo, variable, loc){
+  ## se asume que en ambiente está el dataframe HISTO
+  histo_location <- histo[histo$SampleLocation == loc,]
+  res.aov <-
+    aov(eval(as.symbol(category_histo)) ~ eval(as.symbol(variable)), data=histo_location)
+  tukey <- TukeyHSD(res.aov)
+  cld <- multcompView::multcompLetters4(res.aov, tukey)
+  cld_df <- data.frame(letters = cld$`eval(as.symbol(variable))`$Letters)
+  cld_df[[variable]] <- rownames(cld_df)
+  names(cld_df)[1] <- "histosig"
+  ### para qué organizo si voy a hacer merge?? 
+  # cld_df <- cld_df[match(order_factors, cld_df[[variable]]), ]
+  return(cld_df)
+}
+
+histo_cecum <- dfff_create("C", "Group", c("Group A", "Group B"))
+histo_ileum <- dfff_create("I", "Group", c("Group A", "Group B"))
+
+sig_cecum <- build_sign_table("AdditiveScore", "Group", "C")
+sig_ileum <- build_sign_table("AdditiveScore", "Group", "I")
+
+histo_cecum <- dplyr::left_join(histo_cecum, sig_cecum, by="Group")
+histo_ileum <- dplyr::left_join(histo_ileum, sig_ileum, by="Group")
+  
+histo_cecum$Location <- "C"
+histo_ileum$Location <- "I"
+
+h <- rbind(histo_cecum,histo_ileum)
+ggplot(h, aes(y = mean ,
+                    x = Group, 
+                    text = paste("Num samples:", NumSamples))) +
+    geom_text(aes(label = histosig, y = 23), hjust = 0) +
+    geom_bar(aes(fill = ScoreCategory), stat = "identity") +
+    ylab("Mean Score") + xlab("Group")+ 
+    theme(axis.text.x = element_text(
+      angle = 45,
+      vjust = 0.5,
+      hjust = 1
+    )) +
+    theme(text = element_text(size = 12)) + facet_wrap(~Location, scales = 'free', nrow=1,ncol=2) 
+
+
+```
+
+Row {data-height=30}
+-----------------------------------------------------------------------
+**Inflammation severity in the ileum**
+
+Row {data-height=300}
+-----------------------------------------------------------------------
+### {data-width=400}
+
+When analyzing histopathology results, the specific trait of inflammation severity in the ileum stood out. Anova test indicates inflammation severity tends to change with treatment in ileum (p-value=0.03). Specifically there is a significant change between samples of MediumLowCa and samples of MediumLowCa+VitD, the last one having lower Inflammation scores, which could indicate that the addition of VitD using the recommended level of calcium in diet can reduce the damages in the architecture or integrity of the intestines related with inflammation.
+
+### FIGURE 12 {data-width=400}
+```{r, echo=FALSE, include=TRUE, warning=FALSE, fig.width=8, fig.height=5}
+histo_ileum_s <- dfff_create("I", "Group", c("Group A", "Group B"))
+histo_ileum_s <- histo_ileum_s[histo_ileum_s$ScoreCategory == "InflammationSeverity", ]
+
+sig_ileum <- build_sign_table("InflammationSeverity", "Group", "I")
+histo_ileum_s <- dplyr::left_join(histo_ileum_s, sig_ileum, by="Group")
+
+ggplot(histo_ileum_s, aes(y =mean , x = Group)) + 
+  ylab("Mean Ileum Inflammation Severity") + xlab("") + 
+  geom_bar(stat = "identity", fill = '#FFA076')  +
+  theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1))+
+  geom_text(aes(label = histosig, y = 2.5), hjust = 0)
+
+```
+
+Row {data-height=30}
+-----------------------------------------------------------------------
+**Correlating histopathology with SIWA scores**
+
+
+Row {data-height=500}
+-----------------------------------------------------------------------
+
+
+### {data-width=300}
+
+```{r, include=TRUE, warning=FALSE, echo=FALSE}
+
+```
+
+### FIGURE 13 {data-width=500}
+
+```{r, echo=FALSE, include=TRUE, warning=FALSE, fig.width=5, fig.height=8}
+Type1 <- as.data.frame(rnorm(40, mean = 3, sd = 1.6))
+Type2 <- as.data.frame(rnorm(30, mean = 3, sd = 1.9))
+Type3 <- as.data.frame(rnorm(10, mean = 1, sd = 1))
+names(Type1) <- "values"
+names(Type2) <- "values"
+names(Type3) <- "values"
+
+df_long <- dplyr::bind_rows(list(df1 = Type1, df2 = Type2, df3=Type3), .id = 'source')
+
+
+df_long$Src <- if_else(df_long$source == "df1",  
+        "Mild", if_else(df_long$source == "df2", 
+        "Moderate", "Severe"))
+
+ggplot(df_long, aes(x = Src, y = values, color=Src)) +
+  geom_boxplot() +scale_color_cvi_d("groups")+
+  geom_point(position = position_jitter(width = 0.2)) + ylab("SIWA Microbial Health Score 1")+ xlab("Histopathology score")
+
+```
+
+Gene expression {data-icon="fa-dna"} 
+===================================== 
+
+
+Row {data-height=50}
+-----------------------------------------------------------------------
+
+Row {data-height=100}
+-----------------------------------------------------------------------
+The goal of gene expression is to evaluate how the **animal host is responding to its environment** by altering the levels of various proteins and other compounds in the body in a complex and very controlled manner. When studying gene expression with real-time polymerase chain reaction (PCR), scientists usually investigate changes (increases or decreases) in the expression of a particular gene or set of genes by measuring the abundance of the gene-specific transcript. Here we quantify expression for 3 genes related to inflammation and gut health, as a way to understand how the gut is responding to the gut microbiota and other stimuli. These target genes are: <a href="https://en.wikipedia.org/wiki/Interleukin_10">IL-10</a>, <a href="https://en.wikipedia.org/wiki/Interleukin_1_beta">IL-1B</a>, <a href="https://en.wikipedia.org/wiki/Mucin_2">MUC2</a>.
+
+Row {data-height=450}
+-----------------------------------------------------------------------
+
+### {data-width=200}
+
+### FIGURE 14 {data-width=400}
+
+```{r, echo=FALSE, include=TRUE, warning=FALSE, fig.width=10, fig.height=6}
+
+GENE <- complete_sample_table 
+
+GENE$KitID <- as.character(GENE$KitID)
+GENE <- GENE[GENE$KitID %in% c("72", "73"), ]
+
+build_sign_table_ge <- function(gene, variable, df_loc){
+  cat <- paste0("DeltaCq_", gene)
+  res.aov <-
+    aov(eval(as.symbol(cat)) ~ eval(as.symbol(variable)), data=df_loc)
+  tukey <- TukeyHSD(res.aov)
+  cld <- multcompView::multcompLetters4(res.aov, tukey)
+  cld_df <- data.frame(letters = cld$`eval(as.symbol(variable))`$Letters)
+  cld_df[[variable]] <- rownames(cld_df)
+  names(cld_df)[1] <- "gensig"
+  return(cld_df)
+}
+GENE <- GENE[, c("SampleID", "SampleLocation", "DeltaCq_IL10", "DeltaCq_IL1B", "DeltaCq_MUC2", "KitID")]
+GENE$Group <- ifelse(GENE$KitID == "72", "Group A", "Group B")
+
+GENE_c <- GENE[GENE$SampleLocation == "C", ]
+GENE_i <- GENE[GENE$SampleLocation == "I", ]
+
+ref_value_IL10_i <- mean(GENE_i[GENE_i$KitID == "72",]$DeltaCq_IL10)
+ref_value_IL10_c <- mean(GENE_c[GENE_c$KitID == "72",]$DeltaCq_IL10)
+
+GENE_c$DD_IL10 <- GENE_c$DeltaCq_IL10 - ref_value_IL10_c
+GENE_c$neg_DD_IL10<- -GENE_c$DD_IL10
+
+GENE_i$DD_IL10<-GENE_i$DeltaCq_IL10 - ref_value_IL10_i
+GENE_i$neg_DD_IL10<- -GENE_i$DD_IL10
+
+sig_c <- build_sign_table_ge("IL10", "Group", GENE_c)
+sig_i <- build_sign_table_ge("IL10", "Group", GENE_i)
+
+df_c <- dplyr::left_join(GENE_c, sig_c, by="Group")
+df_i <- dplyr::left_join(GENE_i, sig_i, by="Group")
+
+df_c$Location <- "C"
+df_i$Location <- "I"
+
+g <- rbind(df_c, df_i)
+
+ggplot(g, aes(x =Group, y = neg_DD_IL10, fill = Group)) +
+  geom_violin() +
+  xlab("") + 
+  ylab("Relative gene expression cecum") +  geom_hline(yintercept=0, linetype="dashed") + 
+  theme(legend.position = "none") +
+  theme(axis.text.x = element_text(angle = 60, hjust = 1))+
+  geom_text(aes(label = gensig, y = 1), hjust = 0) + 
+  stat_summary(fun=mean, geom="point", size=2, color="red", fill="red")  + facet_wrap(~Location, scales = "free_y", nrow=1, ncol=2) 
+
+```
+
+Row {data-height=80}
+-----------------------------------------------------------------------
+
+Row {data-height=300}
+-----------------------------------------------------------------------
+
+### Connecting the microbiome with the genes. {data-width=300}
+
+
+
+### FIGURE 15 {data-width=500}
+
+```{r, echo=FALSE}
+input_dir <- "/Users/dvarelat/Documents/SIWA/Pets_flex/Input_data/"
+
+df_perf <- read.csv(file=paste0(input_dir, "performance.csv"))
+ps <- ggplot(df_perf, aes(x=clr_t, y=FCRbefore, color=I("#606060"))) + 
+  geom_point(show.legend = FALSE) + geom_smooth(method=lm, se=TRUE, color="#075b44") + 
+  xlab("Transformed abundance of Lactobacillus spp") + ylab("IL1B expression") + 
+  theme_light() + theme(legend.position = "none")
+ps
+```
