@@ -22,7 +22,7 @@ prevalence <-
     otu_relative_ileum$of_interest <- ifelse(otu_relative_ileum$OTU %in% otus_of_interest == TRUE, "YES", "NO")
     
     #plot
-    colors <- c("#343aeb","#f56342")
+    colors <- c("#075b44","#f56342")
     sizes <- c(0.05, 4)
     prev_plot_ileum=ggplot(data = otu_relative_ileum) +
       theme_classic()+
@@ -52,7 +52,7 @@ prevalence <-
     otu_relative_feces$of_interest <- ifelse(otu_relative_feces$OTU %in% otus_of_interest == TRUE, "YES", "NO")
     
     #plot
-    colors <- c("#16DCC9","#f56342")
+    colors <- c("#fcd8b6","#f56342")
     sizes <- c(0.05, 4)
     prev_plot_feces=ggplot(data = otu_relative_feces) +
       theme_classic()+
@@ -82,7 +82,7 @@ prevalence <-
     otu_relative_cecum$of_interest <- ifelse(otu_relative_cecum$OTU %in% otus_of_interest == TRUE, "YES", "NO")
     
     #plot
-    colors <- c("#BA4FC8","#f56342")
+    colors <- c("#035060","#f56342")
     sizes <- c(0.05, 4)
     prev_plot_cecum=ggplot(data = otu_relative_cecum) +
       theme_classic()+

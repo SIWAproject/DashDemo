@@ -4,9 +4,16 @@
   padding-top: 50px;
 }
 
+.image-container{
+  background-color: red;
+}
 #section-section-1{
   background-color: #D3D3D3;
 }
+#section-section-3{
+  background-color: red;
+}
+
 @font-face {
   font-family: "Larsseit";
   src: url('Larsseit/Larsseit.otf') 
@@ -37,8 +44,6 @@ body{
   top: 50%;
   transform: translateY(-50%);
 }
-
-    
     
 .datatables{
   min-height: 800px;
